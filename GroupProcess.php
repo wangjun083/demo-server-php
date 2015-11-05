@@ -16,15 +16,32 @@ function get_my_group() {
 * @UserFunction(method = POST)
 * @CheckLogin
 */
-function create_group(String $name, String $introduce) {
+function create_group(String $name, String $introduce ,String $users=null) {
 	$db = new DataBase(DB_DNS, DB_USER, DB_PASSWORD);
 	$user_id = getCurrentUserId();
 	$group_id = $db->insert('INSERT INTO `group`(`name`,`introduce`,`create_user_id`) VALUES(?,?,?);', $name, $introduce, $user_id);
 	$db->exec('INSERT INTO `group_user`(`group_id`, `user_id`, `role`) VALUES(?,?,1);', $group_id, $user_id);
+	if (!empty($users)) {
+	    batch_group( $group_id,  $users);
+	}
 
 	return $group_id;
 }
 
+/**
+* 在数据库和融云服务器创建群
+* @UserFunction(method = POST)
+* @CheckLogin
+*/
+function create_group_remote(String $name, String $introduce ,String $users) {
+    $group_id = create_group( $name,  $introduce,null ) ;
+    $user_id = getCurrentUserId();
+    $result = ServerAPI::getInstance()->groupCreate($user_id,$group_id,$name);
+    $group_id = new Integer($group_id);
+    batch_group_remote( $group_id,  $users);
+
+    return $group_id;
+}
 /**
 * 更新群信息
 * @UserFunction(method = POST)
@@ -36,8 +53,53 @@ function update_group(Integer $id, String $name, String $introduce) {
 	if($db->fetchColumn('SELECT `create_user_id` FROM `group` WHERE `id`=?',$id)==$user_id){
 		$db->exec('UPDATE `group` SET `name`=?,`introduce`=? WHERE `id`=?;', $name, $introduce, $id);
 	} else {
-		throw new ProException('you are this group admin', 204);
+		throw new ProException('you are not this group admin', 204);
 	}
+}
+
+/**
+ * 批量添加用户
+ * @UserFunction(method = POST)
+ * @CheckLogin
+ */
+function batch_group(Integer $group_id, String $users){
+    $user_array = explode(',', $users);
+    if (count($user_array)==0) {
+        throw new ProException('add at least one group user', 205);
+    }
+    $user_id = getCurrentUserId();
+    $db = new DataBase(DB_DNS, DB_USER, DB_PASSWORD);
+    if($db->fetchColumn('SELECT `create_user_id` FROM `group` WHERE `id`=?',$group_id)!==$user_id){
+        throw new ProException('you are not this group admin', 204);
+    }
+    //
+    //没有检测群中重复用户和用户表中不存在的id
+    //
+    $param_arr[0] = 'INSERT INTO `group_user`(`group_id`, `user_id`, `role`) VALUES';
+    foreach ($user_array as $i=>$user_item){
+        $param_arr[0] .= '('.$group_id.',?,1),';
+        $param_arr[$i+1] = $user_item;
+    }
+    $param_arr[0] = substr($param_arr[0], 0,-1);
+    $param_arr[0] .=';';
+    $result = call_user_func_array(array($db,'exec'), $param_arr);
+    return $result;
+}
+
+/**
+ * 在本地数据库和融云批量添加用户
+ * @UserFunction(method = POST)
+ * @CheckLogin
+ */
+function batch_group_remote(Integer $group_id, String $users){
+    $result_local = batch_group($group_id,$users);
+    if (!$result_local) {
+        throw new ProException('batch insert failure', 206);
+    }
+    $db = new DataBase(DB_DNS, DB_USER, DB_PASSWORD);
+    $groupName = $db->fetchColumn('SELECT `name` FROM `group` WHERE `id`=?',$group_id);
+    $userId = explode(',', $users);
+    $result = ServerAPI::getInstance()->groupJoin($userId,$group_id,$groupName);
 }
 
 /**
@@ -86,7 +148,7 @@ function quit_group(Integer $id) {
 function get_group(Integer $id) {
 	$db = new DataBase(DB_DNS, DB_USER, DB_PASSWORD);
 	$user_id = getCurrentUserId();
-	$group = $db->fetch('SELETE * FROM `group` WHERE `id` = ?', $id);
+	$group = $db->fetch('SELECT * FROM `group` WHERE `id` = ?', $id);
 	$group['users'] = $db->fetchAll('SELECT a.`id`, a.`username`, a.`portrait` FROM `user` AS a INNER JOIN `group_user` AS b ON  b.user_id=a.id WHERE b.group_id = ?' ,$id);
 
 	return $group;

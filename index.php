@@ -39,7 +39,6 @@ function getAnnotation(Reflector $ref){
 	}
 	return $annotations;
 }
-
 //获取function名称
 if (preg_match("/\w+(?:$|(?=\?))/", $_SERVER["REQUEST_URI"], $matches)) {
 	$func = $matches[0];

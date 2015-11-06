@@ -21,7 +21,7 @@ function create_group(String $name, String $introduce ,String $users=null) {
 	$user_id = getCurrentUserId();
 	$group_id = $db->insert('INSERT INTO `group`(`name`,`introduce`,`create_user_id`) VALUES(?,?,?);', $name, $introduce, $user_id);
 	$db->exec('INSERT INTO `group_user`(`group_id`, `user_id`, `role`) VALUES(?,?,1);', $group_id, $user_id);
-	if (!empty($users)) {
+	if (!empty($users->val)) {
 	    batch_group( $group_id,  $users);
 	}
 
@@ -29,16 +29,18 @@ function create_group(String $name, String $introduce ,String $users=null) {
 }
 
 /**
-* 在数据库和融云服务器创建群
+* 在数据库和融云服务器创建群,users格式为 "uid1,uid2,uid3",即uid用,分隔
 * @UserFunction(method = POST)
 * @CheckLogin
 */
-function create_group_remote(String $name, String $introduce ,String $users) {
+function create_group_remote(String $name, String $introduce ,String $users=null) {
     $group_id = create_group( $name,  $introduce,null ) ;
     $user_id = getCurrentUserId();
     $result = ServerAPI::getInstance()->groupCreate($user_id,$group_id,$name);
-    $group_id = new Integer($group_id);
-    batch_group_remote( $group_id,  $users);
+    if (!empty($users->val)) {
+        $group_id = new Integer($group_id);
+        batch_group_remote( $group_id,  $users);
+    }
 
     return $group_id;
 }
@@ -58,7 +60,7 @@ function update_group(Integer $id, String $name, String $introduce) {
 }
 
 /**
- * 批量添加用户
+ * 批量添加用户,users格式为 "uid1,uid2,uid3",即uid用,分隔
  * @UserFunction(method = POST)
  * @CheckLogin
  */
@@ -87,7 +89,7 @@ function batch_group(Integer $group_id, String $users){
 }
 
 /**
- * 在本地数据库和融云批量添加用户
+ * 在本地数据库和融云批量添加用户,users格式为 "uid1,uid2,uid3",即uid用,分隔
  * @UserFunction(method = POST)
  * @CheckLogin
  */

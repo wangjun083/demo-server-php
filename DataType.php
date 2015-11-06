@@ -44,7 +44,8 @@ final class String extends BaseType{
 		if(strlen($val) > 0) {
 			parent::__construct($val);
 		} else
-			throw new Exception("this value is Empty");
+		    '';
+// 			throw new Exception("this value is Empty");
 	}
 }
 

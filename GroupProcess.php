@@ -48,12 +48,25 @@ function create_group_remote(String $name, String $introduce ,String $users) {
     $group_id = create_group( $name,  $introduce ) ;
     $user_id = getCurrentUserId();
     $result = ServerAPI::getInstance()->groupCreate($user_id,$group_id,$name);
-    if (!empty($users->val)) {
-        $group_id = new Integer($group_id);
-        batch_group_remote( $group_id,  $users);
+    
+    if (!$result) {
+        throw new Exception('API Server Error');
     }
-
-    return $group_id;
+    
+    if ($result->code != 200) {
+        throw new ProException($result->errorMessage, $result->code);
+    } else {
+        if (!empty($users->val)) {
+            $group_id = new Integer($group_id);
+            $result = batch_group_remote( $group_id,  $users);
+            if ($result!==TRUE) {
+                throw new Exception('add users Error');
+            }
+        }
+        return $group_id;
+    }
+    
+    
 }
 /**
 * 更新群信息
@@ -111,6 +124,14 @@ function batch_group_remote(Integer $group_id, String $users){
     $groupName = $db->fetchColumn('SELECT `name` FROM `group` WHERE `id`=?',$group_id);
     $userId = explode(',', $users);
     $result = ServerAPI::getInstance()->groupJoin($userId,$group_id,$groupName);
+    if (!$result) {
+        throw new Exception('API Server Error');
+    }
+    if ($result->code != 200) {
+        throw new ProException($result->errorMessage, $result->code);
+    } else {
+        return TRUE;
+    }
 }
 
 /**

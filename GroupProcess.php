@@ -16,16 +16,27 @@ function get_my_group() {
 * @UserFunction(method = POST)
 * @CheckLogin
 */
-function create_group(String $name, String $introduce ,String $users=null) {
+function create_group(String $name, String $introduce ) {
 	$db = new DataBase(DB_DNS, DB_USER, DB_PASSWORD);
 	$user_id = getCurrentUserId();
 	$group_id = $db->insert('INSERT INTO `group`(`name`,`introduce`,`create_user_id`) VALUES(?,?,?);', $name, $introduce, $user_id);
 	$db->exec('INSERT INTO `group_user`(`group_id`, `user_id`, `role`) VALUES(?,?,1);', $group_id, $user_id);
-	if (!empty($users->val)) {
-	    batch_group( $group_id,  $users);
-	}
 
 	return $group_id;
+}
+
+/**
+ * 创建群,并添加一批用户,users格式为 "uid1,uid2,uid3",即uid用,分隔
+ * @UserFunction(method = POST)
+ * @CheckLogin
+ */
+function create_uses_group(String $name, String $introduce ,String $users) {
+    $group_id = create_group($name,$introduce);
+    if (!empty($users->val)) {
+        batch_group( $group_id,  $users);
+    }
+
+    return $group_id;
 }
 
 /**
@@ -33,8 +44,8 @@ function create_group(String $name, String $introduce ,String $users=null) {
 * @UserFunction(method = POST)
 * @CheckLogin
 */
-function create_group_remote(String $name, String $introduce ,String $users=null) {
-    $group_id = create_group( $name,  $introduce,null ) ;
+function create_group_remote(String $name, String $introduce ,String $users) {
+    $group_id = create_group( $name,  $introduce ) ;
     $user_id = getCurrentUserId();
     $result = ServerAPI::getInstance()->groupCreate($user_id,$group_id,$name);
     if (!empty($users->val)) {

@@ -140,7 +140,7 @@ function token(){
 
 	if($user) {
 		$token = ServerAPI::getInstance()->getToken($user['id'], $user['username'], $user['portrait']);
-
+		
 		if (!$token) {
 			throw new Exception('API Server Error');
 		}

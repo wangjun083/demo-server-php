@@ -85,9 +85,7 @@ function batch_group(Integer $group_id, String $users){
     if($db->fetchColumn('SELECT `create_user_id` FROM `group` WHERE `id`=?',$group_id)!==$user_id){
         throw new ProException('you are not this group admin', 204);
     }
-    //
     //没有检测群中重复用户和用户表中不存在的id
-    //
     $param_arr[0] = 'INSERT INTO `group_user`(`group_id`, `user_id`, `role`) VALUES';
     foreach ($user_array as $i=>$user_item){
         $param_arr[0] .= '('.$group_id.',?,1),';

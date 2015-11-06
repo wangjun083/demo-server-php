@@ -938,6 +938,9 @@ class ServerAPI{
             $ret =  curl_errno($ch);
         }
         curl_close($ch);
+        if ($this->format=='json') {
+            $ret = json_decode($ret);
+        }
         return $ret;
     }
 }
